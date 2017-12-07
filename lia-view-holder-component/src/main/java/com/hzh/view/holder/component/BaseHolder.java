@@ -15,7 +15,7 @@ import java.io.Serializable;
 /**
  * 拆解Activity或者Fragment中的View组件
  */
-public abstract class BaseHolder implements LayoutCallback, Serializable, View.OnAttachStateChangeListener {
+public abstract class BaseHolder implements LayoutCallback, Serializable {
     protected View root;
     protected Context context;
 
@@ -30,11 +30,14 @@ public abstract class BaseHolder implements LayoutCallback, Serializable, View.O
         parent.addView(getRoot(), onGetAddViewIndex(parent));
     }
 
+    /**
+     * 初始化
+     */
     private void initView() {
         onLayoutBefore();
         root = View.inflate(context, onLayoutId(), null);
         //添加在视图中被添加、移除的监听
-        root.addOnAttachStateChangeListener(this);
+        addOnAttachStateChangeListener();
         //添加视图在Windows中焦点监听
         if (Build.VERSION.SDK_INT > Build.VERSION_CODES.JELLY_BEAN_MR2) {
             addOnWindowFocusChangeListener();
@@ -44,27 +47,24 @@ public abstract class BaseHolder implements LayoutCallback, Serializable, View.O
     }
 
     /**
-     * 从视图树中添加时回调
-     *
-     * @param view
+     * 添加在视图中被添加、移除的监听，3.0以上有效
      */
-    @Override
-    public void onViewAttachedToWindow(View view) {
+    @TargetApi(Build.VERSION_CODES.HONEYCOMB_MR1)
+    private void addOnAttachStateChangeListener() {
+        if (Build.VERSION.SDK_INT > Build.VERSION_CODES.HONEYCOMB_MR1) {
+            addOnAttachStateChangeListener();
+            root.addOnAttachStateChangeListener(new View.OnAttachStateChangeListener() {
+                @Override
+                public void onViewAttachedToWindow(View view) {
+                    BaseHolder.this.onViewAttachedToWindow(view);
+                }
 
-    }
-
-    /**
-     * 从视图树中移除时回调
-     *
-     * @param view
-     */
-    @Override
-    public void onViewDetachedFromWindow(View view) {
-
-    }
-
-    public <E extends View> E findView(int id) {
-        return (E) root.findViewById(id);
+                @Override
+                public void onViewDetachedFromWindow(View view) {
+                    BaseHolder.this.onViewDetachedFromWindow(view);
+                }
+            });
+        }
     }
 
     /**
@@ -78,6 +78,32 @@ public abstract class BaseHolder implements LayoutCallback, Serializable, View.O
                 BaseHolder.this.onWindowFocusChanged(hasFocus);
             }
         });
+    }
+
+    /**
+     * 从视图树中添加时回调
+     *
+     * @param view
+     */
+    public void onViewAttachedToWindow(View view) {
+    }
+
+    /**
+     * 从视图树中移除时回调
+     *
+     * @param view
+     */
+    public void onViewDetachedFromWindow(View view) {
+    }
+
+    /**
+     * 泛型fingViewById
+     *
+     * @param id 控件id
+     * @return 控件对象
+     */
+    public <E extends View> E findView(int id) {
+        return (E) root.findViewById(id);
     }
 
     /**
@@ -125,16 +151,25 @@ public abstract class BaseHolder implements LayoutCallback, Serializable, View.O
 
     }
 
+    /**
+     * 填充布局前回调
+     */
+    @Override
+    public void onLayoutBefore() {
+    }
+
+    /**
+     * 获取布局Id时回调
+     *
+     * @return
+     */
     @Override
     public abstract int onLayoutId();
 
-    @Override
-    public void onLayoutBefore() {
-
-    }
-
+    /**
+     * 获取布局id初始化一切后回调
+     */
     @Override
     public void onLayoutAfter() {
-
     }
 }
